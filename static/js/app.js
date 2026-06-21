@@ -19,6 +19,7 @@ const elements = {
     searchInput: document.getElementById('search-input'),
     clearSearch: document.getElementById('clear-search'),
     refreshBtn: document.getElementById('refresh-btn'),
+    exportCsvBtn: document.getElementById('export-csv-btn'),
     refreshSpinner: document.querySelector('.refresh-spinner'),
     lastUpdatedVal: document.getElementById('last-updated-val'),
     totalUpdatesVal: document.getElementById('total-updates-val'),
@@ -61,6 +62,11 @@ function setupEventListeners() {
     // Refresh button
     elements.refreshBtn.addEventListener('click', () => {
         fetchNotes(true);
+    });
+
+    // Export CSV button
+    elements.exportCsvBtn.addEventListener('click', () => {
+        exportToCSV();
     });
 
     // Search input
@@ -212,6 +218,9 @@ function renderNotes() {
                 <div class="card-header">
                     <span class="badge ${badgeClass}">${note.type}</span>
                     <span class="card-date"><i class="fa-regular fa-calendar-days"></i> ${note.date}</span>
+                    <button class="card-copy-btn" data-id="${note.id}" title="Copy to clipboard">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
                 </div>
                 <div class="card-content">
                     ${note.content_html}
@@ -229,6 +238,23 @@ function renderNotes() {
             const note = appState.notes.find(n => n.id === noteId);
             if (note) {
                 handleCardSelection(note);
+            }
+        });
+    });
+
+    // Attach click listeners to copy buttons
+    elements.updatesFeed.querySelectorAll('.card-copy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Stop click from selecting the card
+            const noteId = btn.getAttribute('data-id');
+            const note = appState.notes.find(n => n.id === noteId);
+            if (note) {
+                navigator.clipboard.writeText(note.plain_text)
+                    .then(() => showToast('Copied update to clipboard!', 'success'))
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Failed to copy', 'error');
+                    });
             }
         });
     });
@@ -384,4 +410,41 @@ function showToast(message, type = 'success') {
             toast.remove();
         }, 300);
     }, 4000);
+}
+
+// Export notes in current view to CSV file
+function exportToCSV() {
+    if (appState.filteredNotes.length === 0) {
+        showToast('No notes available to export', 'error');
+        return;
+    }
+    
+    const headers = ['ID', 'Date', 'Type', 'Description', 'Link'];
+    const rows = appState.filteredNotes.map(note => [
+        note.id,
+        note.date,
+        note.type,
+        // Double quotes wrapper for CSV safety
+        `"${note.plain_text.replace(/"/g, '""')}"`,
+        note.link
+    ]);
+    
+    const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    // Create download trigger
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bigquery_release_notes_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('Exported CSV successfully!', 'success');
 }
