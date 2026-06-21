@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Explorer & Twitter Composer</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        
+        <!-- Sidebar: Navigation & Controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon"><i class="fa-solid fa-cube text-glow"></i></span>
+                    <span class="logo-text">BigQuery<span class="highlight">Notes</span></span>
+                </div>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="stats-card">
+                <div class="stat-item">
+                    <span class="stat-label">Last Checked</span>
+                    <span class="stat-value" id="last-updated-val">--:--:--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Updates</span>
+                    <span class="stat-value" id="total-updates-val">0</span>
+                </div>
+            </div>
+
+            <!-- Filters & Types -->
+            <div class="control-section">
+                <h3><i class="fa-solid fa-filter"></i> Filter by Type</h3>
+                <div class="filter-pills" id="type-filters">
+                    <button class="filter-pill active" data-type="all">
+                        <span class="dot dot-all"></span> All Updates
+                    </button>
+                    <button class="filter-pill" data-type="Feature">
+                        <span class="dot dot-feature"></span> Feature
+                    </button>
+                    <button class="filter-pill" data-type="Announcement">
+                        <span class="dot dot-announcement"></span> Announcement
+                    </button>
+                    <button class="filter-pill" data-type="Issue">
+                        <span class="dot dot-issue"></span> Issue
+                    </button>
+                    <button class="filter-pill" data-type="Breaking">
+                        <span class="dot dot-breaking"></span> Breaking
+                    </button>
+                    <button class="filter-pill" data-type="Change">
+                        <span class="dot dot-change"></span> Change
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Sorting -->
+            <div class="control-section">
+                <h3><i class="fa-solid fa-sort"></i> Date Order</h3>
+                <div class="sort-buttons">
+                    <button class="sort-btn active" id="sort-desc" title="Newest First">
+                        <i class="fa-solid fa-arrow-down-9-1"></i> Newest
+                    </button>
+                    <button class="sort-btn" id="sort-asc" title="Oldest First">
+                        <i class="fa-solid fa-arrow-up-1-9"></i> Oldest
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Navbar -->
+            <header class="top-nav">
+                <div class="search-bar-container">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search updates by keywords..." autocomplete="off">
+                    <button id="clear-search" class="clear-btn" style="display: none;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="nav-actions">
+                    <button id="refresh-btn" class="btn btn-primary" title="Refresh Release Notes">
+                        <i class="fa-solid fa-rotate refresh-spinner"></i>
+                        <span>Refresh Notes</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Cards Container -->
+            <div class="feed-section">
+                <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                    <div class="spinner-container">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        <p>Fetching latest release notes...</p>
+                    </div>
+                </div>
+                
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <i class="fa-solid fa-folder-open empty-icon"></i>
+                    <h2>No updates found</h2>
+                    <p>Try refining your search query or type filters.</p>
+                </div>
+
+                <div class="updates-feed" id="updates-feed">
+                    <!-- Cards will be dynamically injected here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Composer Panel: Tweet Builder -->
+        <aside class="composer-sidebar" id="composer-sidebar">
+            <div class="composer-header">
+                <h3><i class="fa-brands fa-x-twitter text-glow"></i> Tweet Composer</h3>
+                <span class="composer-subtitle">Select any update to write a tweet</span>
+            </div>
+            
+            <div class="composer-body">
+                <!-- Composer Empty State -->
+                <div class="composer-empty" id="composer-empty">
+                    <i class="fa-regular fa-hand-pointer"></i>
+                    <p>Click on any release note card on the left to load it into the Tweet Composer.</p>
+                </div>
+
+                <!-- Composer Form (hidden by default until selected) -->
+                <div class="composer-form-container" id="composer-form-container" style="display: none;">
+                    <div class="selected-meta">
+                        <span class="badge" id="composer-badge">Feature</span>
+                        <span class="date" id="composer-date">June 17, 2026</span>
+                    </div>
+
+                    <div class="tweet-box-wrapper">
+                        <textarea id="tweet-textarea" rows="8" placeholder="Compose your tweet..."></textarea>
+                        
+                        <!-- Progress Ring & Character Count -->
+                        <div class="tweet-box-footer">
+                            <div class="char-counter">
+                                <svg class="progress-ring" width="24" height="24">
+                                    <circle class="progress-ring__circle-bg" stroke="#2a2f3d" stroke-width="2.5" fill="transparent" r="9" cx="12" cy="12"/>
+                                    <circle class="progress-ring__circle" id="char-progress-circle" stroke="#00d2ff" stroke-width="2.5" fill="transparent" r="9" cx="12" cy="12"/>
+                                </svg>
+                                <span id="char-count-text">280</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="preset-suggestions">
+                        <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Templates</h4>
+                        <div class="preset-buttons">
+                            <button class="preset-btn" id="preset-summary" title="Short concise summary">Concise</button>
+                            <button class="preset-btn" id="preset-hype" title="Exciting/hyped version">Hype</button>
+                            <button class="preset-btn" id="preset-technical" title="Detailed technical details">Technical</button>
+                        </div>
+                    </div>
+
+                    <button id="tweet-submit-btn" class="btn btn-tweet">
+                        <i class="fa-brands fa-x-twitter"></i>
+                        <span>Post Tweet</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Custom Script -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
