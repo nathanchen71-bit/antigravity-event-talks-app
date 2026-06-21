@@ -23,6 +23,7 @@ const elements = {
     themeToggleBtn: document.getElementById('theme-toggle-btn'),
     refreshSpinner: document.querySelector('.refresh-spinner'),
     lastUpdatedVal: document.getElementById('last-updated-val'),
+    syncStatusVal: document.getElementById('sync-status-val'),
     totalUpdatesVal: document.getElementById('total-updates-val'),
     typeFilters: document.getElementById('type-filters'),
     sortDesc: document.getElementById('sort-desc'),
@@ -158,15 +159,18 @@ async function fetchNotes(isRefresh = false) {
             appState.notes = data.notes;
             elements.lastUpdatedVal.textContent = data.last_updated;
             elements.totalUpdatesVal.textContent = data.notes.length;
+            updateSyncStatusUI(data.sync_status);
             
             showToast(isRefresh ? 'Successfully refreshed notes!' : 'Notes loaded successfully', 'success');
             renderNotes();
         } else {
             showToast(data.error || 'Failed to fetch release notes', 'error');
+            updateSyncStatusUI('failed');
         }
     } catch (err) {
         console.error(err);
         showToast('Network error while retrieving release notes', 'error');
+        updateSyncStatusUI('failed');
     } finally {
         showLoading(false);
         elements.refreshSpinner.classList.remove('spinning');
@@ -466,4 +470,26 @@ function toggleTheme() {
     const isLight = document.body.classList.toggle('light-theme');
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
     showToast(`Swapped to ${isLight ? 'Light' : 'Dark'} Mode!`, 'success');
+}
+
+// Update the visual Sync Status Dot and description
+function updateSyncStatusUI(status) {
+    if (!elements.syncStatusVal) return;
+    const statusText = elements.syncStatusVal.querySelector('.status-text');
+    
+    // Reset classes while keeping core classes
+    elements.syncStatusVal.className = 'stat-value sync-status';
+    
+    if (status === 'synced') {
+        elements.syncStatusVal.classList.add('synced');
+        statusText.textContent = 'Synced with Cloud';
+    } else if (status === 'cached') {
+        elements.syncStatusVal.classList.add('cached');
+        statusText.textContent = 'Viewing Local Cache';
+    } else if (status === 'failed') {
+        elements.syncStatusVal.classList.add('failed');
+        statusText.textContent = 'Sync Failed';
+    } else {
+        statusText.textContent = 'Checking...';
+    }
 }

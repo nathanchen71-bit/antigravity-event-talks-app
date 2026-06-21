@@ -106,13 +106,16 @@ def index():
 
 @app.route('/api/notes', methods=['GET'])
 def get_notes():
+    is_fresh_fetch = False
     if not cached_notes:
         success = fetch_notes()
         if not success:
             return jsonify({'error': 'Failed to fetch release notes', 'notes': []}), 500
+        is_fresh_fetch = True
     return jsonify({
         'notes': cached_notes,
-        'last_updated': last_updated_time
+        'last_updated': last_updated_time,
+        'sync_status': 'synced' if is_fresh_fetch else 'cached'
     })
 
 @app.route('/api/refresh', methods=['POST'])
@@ -122,14 +125,16 @@ def refresh_notes():
         return jsonify({
             'success': True,
             'notes': cached_notes,
-            'last_updated': last_updated_time
+            'last_updated': last_updated_time,
+            'sync_status': 'synced'
         })
     else:
         return jsonify({
             'success': False,
             'error': 'Failed to refresh release notes. Please try again.',
             'notes': cached_notes,
-            'last_updated': last_updated_time
+            'last_updated': last_updated_time,
+            'sync_status': 'failed'
         }), 500
 
 if __name__ == '__main__':
