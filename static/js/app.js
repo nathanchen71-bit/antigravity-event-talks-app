@@ -20,6 +20,7 @@ const elements = {
     clearSearch: document.getElementById('clear-search'),
     refreshBtn: document.getElementById('refresh-btn'),
     exportCsvBtn: document.getElementById('export-csv-btn'),
+    themeToggleBtn: document.getElementById('theme-toggle-btn'),
     refreshSpinner: document.querySelector('.refresh-spinner'),
     lastUpdatedVal: document.getElementById('last-updated-val'),
     totalUpdatesVal: document.getElementById('total-updates-val'),
@@ -46,6 +47,12 @@ const elements = {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
+    // Load saved theme preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+    }
+
     initProgressCircle();
     setupEventListeners();
     fetchNotes(false);
@@ -67,6 +74,11 @@ function setupEventListeners() {
     // Export CSV button
     elements.exportCsvBtn.addEventListener('click', () => {
         exportToCSV();
+    });
+
+    // Theme toggle button
+    elements.themeToggleBtn.addEventListener('click', () => {
+        toggleTheme();
     });
 
     // Search input
@@ -447,4 +459,11 @@ function exportToCSV() {
     document.body.removeChild(link);
     
     showToast('Exported CSV successfully!', 'success');
+}
+
+// Toggle Dark/Light Theme and save preference
+function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-theme');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    showToast(`Swapped to ${isLight ? 'Light' : 'Dark'} Mode!`, 'success');
 }
